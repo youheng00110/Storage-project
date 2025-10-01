@@ -18,4 +18,4 @@ for word,count in counts.items():
 lst2=sorted(lst2,reverse=True)
 for count,word in lst2[:5]:
     print("排名前五的单词分别为：",word,count)
-print("各单词出现的次数为：",counts,"\n","最多的单词是：",bigword,"\n出现",bigcount,"次")
+print("最多的单词是：",bigword,"\n出现",bigcount,"次\n""各单词出现的次数为：",counts)
