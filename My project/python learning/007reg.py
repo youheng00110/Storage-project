@@ -1,6 +1,5 @@
 import re
 with open('test1.txt', 'r', encoding='utf-8') as hand:
     for line in hand:
-        line=line.rstrip()
-        if re.search(r"^\s*Middle English",line):
+        if re.findall(r"^\s*From:\s*([A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,})",line):
             print(line)
