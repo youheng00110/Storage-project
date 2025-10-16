@@ -35,7 +35,6 @@ testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size,
 classes = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck') # 类别名称
 
 
-
 # 测试导入库与提取
 print("\n测试是否导入库")
 while(True):
@@ -69,10 +68,17 @@ class Net(nn.Module):
         # 卷积层
         self.conv2 = nn.Conv2d(6, 16, 5) 
         # 仿射层/全连接层，y = Wx + b
-        self.fc1   = nn.Linear(16*5*5, 120) 
-        self.fc2   = nn.Linear(120, 84)
-        self.fc3   = nn.Linear(84, 10)
+        self.fc1 = nn.Linear(16 * 5 * 5, 120)
+        self.dropout = nn.Dropout(p=0.5)  # Dropout 用于降低过拟合
+        self.fc2 = nn.Linear(120, 84)
+        self.fc3 = nn.Linear(84, 10)
 
+
+#########################
+#
+#  TASK2:添加了dropout层
+#
+#########################
     def forward(self, x): 
         # 卷积 -> 激活 -> 池化 (relu激活函数不改变输入的形状)
         # [batch size, 3, 32, 32] -- conv1 --> [batch size, 6, 28, 28] -- maxpool --> [batch size, 6, 14, 14]
@@ -83,6 +89,7 @@ class Net(nn.Module):
         x = x.view(x.size()[0], -1) 
         # [batch size, 16 * 5 * 5] -- fc1 --> [batch size, 120]
         x = F.relu(self.fc1(x))
+        x = self.dropout(x)  # 训练时随机屏蔽一部分神经元
         # [batch size, 120] -- fc2 --> [batch size, 84]
         x = F.relu(self.fc2(x))
         # [batch size, 84] -- fc3 --> [batch size, 10]
@@ -92,10 +99,21 @@ class Net(nn.Module):
 net = Net()
 print(net)
 
+
+##########################
+#                        #
+#   TASK2:添加了正则化    #
+#                        #
+##########################
 # 设定损失函数和优化器
 from torch import optim
 criterion = nn.CrossEntropyLoss() # 交叉熵损失函数
-optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9) # 使用SGD（随机梯度下降）优化
+optimizer = optim.SGD(
+    net.parameters(),
+    lr=0.001,
+    momentum=0.9,
+    weight_decay=1e-4  # L2 权重衰减（正则化项）
+) # 使用SGD（随机梯度下降）优化
 num_epochs = 5 # 训练 5 个 epoch
 
 
@@ -143,9 +161,11 @@ def train(trainloader, net, num_epochs, criterion, optimizer, save_path=None):
 save_path = "./checkpoints"
 losses = train(trainloader, net, num_epochs, criterion, optimizer, save_path)
 
-
-
-#TASK1：绘制损失函数曲线
+############################
+#                          #
+#  TASK1：绘制损失函数曲线   # 
+#                          #
+############################
 def draw(values):
     plt.plot(values)
     plt.xlabel("Iteration")
