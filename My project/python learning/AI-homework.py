@@ -35,6 +35,7 @@ testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size,
 classes = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck') # 类别名称
 
 
+
 # 测试导入库与提取
 print("\n测试是否导入库")
 while(True):
