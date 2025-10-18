@@ -34,24 +34,24 @@ testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size,
 # 观察一下数据集的内容
 classes = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck') # 类别名称
 
-
 # 测试导入库与提取
-print("\n测试是否导入库")
-while(True):
-    random_test=random.randint(0,len(testset)-1) # 随机选一个测试集的样本
-    (data, label) = trainset[random_test] 
-    print(len(trainset))
-    print(data.size()) 
-    print(label) # label是整数
-    print(classes[label])
+if __name__ == "__main__":  # 仅在直接运行该文件时执行交互代码
+    print("\n测试是否导入库")
+    while(True):
+        random_test=random.randint(0,len(testset)-1) # 随机选一个测试集的样本
+        (data, label) = trainset[random_test] 
+        print(len(trainset))
+        print(data.size()) 
+        print(label) # label是整数
+        print(classes[label])
 
-    img = ((data + 1) / 2).permute(1, 2, 0)  # CHW -> HWC
-    plt.imshow(img)
-    plt.title(classes[label])
-    plt.axis('off')
-    plt.show()
-    if input("是否继续测试？y/n:") != 'y':
-        break
+        img = ((data + 1) / 2).permute(1, 2, 0)  # CHW -> HWC
+        plt.imshow(img)
+        plt.title(classes[label])
+        plt.axis('off')
+        plt.show()
+        if input("是否继续测试？y/n:") != 'y':
+            break
 
 
 #导入框架
