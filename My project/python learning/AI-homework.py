@@ -14,13 +14,29 @@ import matplotlib.pyplot as plt
 import random
 import os
 
+# ========== 验证库导入成功 ==========
+print("\n========== 库导入检验 ==========")
+try:
+    print(f"✓ torch 版本: {torch.__version__}")
+    print(f"✓ torchvision 版本: {torchvision.__version__}")
+    print(f"✓ matplotlib 导入成功")
+    print(f"✓ random 导入成功")
+    print(f"✓ os 导入成功")
+    print(f"✓ CUDA 可用: {torch.cuda.is_available()}")
+    if torch.cuda.is_available():
+        print(f"✓ GPU 设备: {torch.cuda.get_device_name(0)}")
+    print("所有库导入成功！\n")
+except Exception as e:
+    print(f"✗ 库导入失败: {e}")
+    sys.exit(1)
+
 # 设定对图片的归一化处理方式，并且下载数据集
 transform = transforms.Compose(
     [transforms.ToTensor(),
      transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
      ])
 
-batch_size = 4
+batch_size = 64  # 改为32（原来是64）
 
 trainset = torchvision.datasets.CIFAR10(root='./dataset', train=True,
                                         download=True, transform=transform)
@@ -30,31 +46,11 @@ trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size,
 testset = torchvision.datasets.CIFAR10(root='./dataset', train=False,
                                        download=True, transform=transform)
 testloader = torch.utils.data.DataLoader(testset, batch_size=batch_size,
-                                           shuffle=False, num_workers=2)
+                                         shuffle=False, num_workers=2)
 # 观察一下数据集的内容
 classes = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck') # 类别名称
 
-# 测试导入库与提取
-if __name__ == "__main__":  # 仅在直接运行该文件时执行交互代码
-    print("\n测试是否导入库")
-    while(True):
-        random_test=random.randint(0,len(testset)-1) # 随机选一个测试集的样本
-        (data, label) = trainset[random_test] 
-        print(len(trainset))
-        print(data.size()) 
-        print(label) # label是整数
-        print(classes[label])
-
-        img = ((data + 1) / 2).permute(1, 2, 0)  # CHW -> HWC
-        plt.imshow(img)
-        plt.title(classes[label])
-        plt.axis('off')
-        plt.show()
-        if input("是否继续测试？y/n:") != 'y':
-            break
-
-
-#导入框架
+# 导入框架
 import torch.nn as nn
 import torch.nn.functional as F
 
@@ -123,32 +119,34 @@ def train(trainloader, net, num_epochs, criterion, optimizer, save_path=None):
     if save_path:
         os.makedirs(save_path, exist_ok=True)
 
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    net.to(device)  # 模型移到GPU
+
     for epoch in range(num_epochs):
         running_loss = 0.0
         for i, data in enumerate(trainloader, 0):
     
-            # 1. 取出数据
+            # 1. 取出数据，移到GPU
             inputs, labels = data
-    
+            inputs, labels = inputs.to(device), labels.to(device)
+      
             # 梯度清零
             optimizer.zero_grad()
     
             # 2. 前向计算和反向传播
-            outputs = net(inputs) # 送入网络（正向传播）
-            loss = criterion(outputs, labels) # 计算损失函数
+            outputs = net(inputs)
+            loss = criterion(outputs, labels)
             
             # 3. 反向传播，更新参数
-            loss.backward() # 反向传播
+            loss.backward()
             optimizer.step()
-            
 
-
-            #观察训练状态
+            # 观察训练状态
             loss_history.append(loss.item())
             running_loss += loss.item()
-            if i % 1000 == 999:#打印训练状态
+            if i % 200 == 199:  # batch变大，打印频率改小
                 print('epoch %d: batch %5d loss: %.3f'
-                      % (epoch + 1, i + 1, running_loss / 2000))
+                      % (epoch + 1, i + 1, running_loss / 200))
                 running_loss = 0.0
 
         if save_path:
@@ -157,15 +155,7 @@ def train(trainloader, net, num_epochs, criterion, optimizer, save_path=None):
     print('Finished Training')
     return loss_history
 
-# 开始训练
-save_path = "./checkpoints"
-losses = train(trainloader, net, num_epochs, criterion, optimizer, save_path)
-
-############################
-#                          #
-#  TASK1：绘制损失函数曲线   # 
-#                          #
-############################
+# 定义 draw 函数（保持原样）
 def draw(values):
     plt.plot(values)
     plt.xlabel("Iteration")
@@ -174,27 +164,42 @@ def draw(values):
     plt.grid(True)
     plt.show()
 
-draw(losses)
-
-
-
-
-#测试函数
+# 测试函数
 def predict(testloader, net):
-    correct = 0 # 预测正确的图片数
-    total = 0 # 总共的图片数
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    net.to(device)  # 模型移到GPU
     
-    with torch.no_grad(): # 正向传播时不计算梯度
+    correct = 0
+    total = 0
+    with torch.no_grad():
         for data in testloader:
-            # 1. 取出数据
             images, labels = data
-            # 2. 正向传播，得到输出结果
+            images, labels = images.to(device), labels.to(device)  # 数据移到GPU
             outputs = net(images)
-            # 3. 从输出中得到模型预测
             _, predicted = torch.max(outputs, 1)
-            # 4. 计算性能指标
             total += labels.size(0)
-            correct += (predicted == labels).sum()
-    
+            correct += (predicted == labels).sum().item()
     print('测试集中的准确率为: %d %%' % (100 * correct / total))
-predict(testloader, net)
+
+# ========== 主程序入口 ==========
+if __name__ == "__main__":
+    net = Net()
+    print(net)
+
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.SGD(
+        net.parameters(), 
+        lr=0.009,          # 改回正常学习率
+        momentum=0.9, 
+        weight_decay=1e-4
+    )
+    num_epochs = 5
+    save_path = "./checkpoints"
+
+    losses = train(trainloader, net, num_epochs, criterion, optimizer, save_path)
+    
+    # 平滑绘图：每 100 个点取平均
+    smoothed = [sum(losses[i:i+200])/200 for i in range(0, len(losses)-200, 200)]
+    draw(smoothed)
+    
+    predict(testloader, net)
