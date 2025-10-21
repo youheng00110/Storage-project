@@ -36,7 +36,7 @@ transform = transforms.Compose(
      transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
      ])
 
-batch_size = 64  # 改为32（原来是64）
+batch_size = 64 # 设置批处理大小
 
 trainset = torchvision.datasets.CIFAR10(root='./dataset', train=True,
                                         download=True, transform=transform)
@@ -98,7 +98,7 @@ print(net)
 
 ##########################
 #                        #
-#   TASK2:添加了正则化    #
+#   TASK2:正则化已启用    #
 #                        #
 ##########################
 # 设定损失函数和优化器
@@ -106,11 +106,11 @@ from torch import optim
 criterion = nn.CrossEntropyLoss() # 交叉熵损失函数
 optimizer = optim.SGD(
     net.parameters(),
-    lr=0.001,
+    lr=0.009,
     momentum=0.9,
-    weight_decay=1e-4  # L2 权重衰减（正则化项）
+    weight_decay=1e-4  # L2 权重衰减（正则化项）- 已启用
 ) # 使用SGD（随机梯度下降）优化
-num_epochs = 5 # 训练 5 个 epoch
+num_epochs = 15 # 训练 15个 epoch
 
 
 # 训练函数
@@ -123,28 +123,21 @@ def train(trainloader, net, num_epochs, criterion, optimizer, save_path=None):
     net.to(device)  # 模型移到GPU
 
     for epoch in range(num_epochs):
+        net.train()  # 设置为训练模式，启用 Dropout
         running_loss = 0.0
         for i, data in enumerate(trainloader, 0):
-    
-            # 1. 取出数据，移到GPU
             inputs, labels = data
             inputs, labels = inputs.to(device), labels.to(device)
-      
-            # 梯度清零
+            
             optimizer.zero_grad()
-    
-            # 2. 前向计算和反向传播
             outputs = net(inputs)
             loss = criterion(outputs, labels)
-            
-            # 3. 反向传播，更新参数
             loss.backward()
             optimizer.step()
 
-            # 观察训练状态
             loss_history.append(loss.item())
             running_loss += loss.item()
-            if i % 200 == 199:  # batch变大，打印频率改小
+            if i % 200 == 199:
                 print('epoch %d: batch %5d loss: %.3f'
                       % (epoch + 1, i + 1, running_loss / 200))
                 running_loss = 0.0
@@ -167,19 +160,25 @@ def draw(values):
 # 测试函数
 def predict(testloader, net):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    net.to(device)  # 模型移到GPU
+    net.to(device)
+    net.eval()  # 切换到评估模式，关闭 Dropout
     
     correct = 0
     total = 0
     with torch.no_grad():
         for data in testloader:
             images, labels = data
-            images, labels = images.to(device), labels.to(device)  # 数据移到GPU
+            images, labels = images.to(device), labels.to(device)
             outputs = net(images)
             _, predicted = torch.max(outputs, 1)
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
-    print('测试集中的准确率为: %d %%' % (100 * correct / total))
+    
+    accuracy = 100 * correct / total
+    print('\n' + '='*50)
+    print(f'测试集准确率: {accuracy:.2f}%')
+    print('='*50 + '\n')
+    return accuracy
 
 # ========== 主程序入口 ==========
 if __name__ == "__main__":
@@ -189,17 +188,15 @@ if __name__ == "__main__":
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(
         net.parameters(), 
-        lr=0.009,          # 改回正常学习率
+        lr=0.011,
         momentum=0.9, 
         weight_decay=1e-4
     )
-    num_epochs = 5
-    save_path = "./checkpoints"
+    num_epochs = 15
+    save_path = "./checkpoints_with_regularization"
 
     losses = train(trainloader, net, num_epochs, criterion, optimizer, save_path)
-    
-    # 平滑绘图：每 100 个点取平均
-    smoothed = [sum(losses[i:i+200])/200 for i in range(0, len(losses)-200, 200)]
+    smoothed = [sum(losses[i:i+250])/250 for i in range(0, len(losses)-250, 250)]
     draw(smoothed)
     
     predict(testloader, net)
