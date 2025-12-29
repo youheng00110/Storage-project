@@ -1,0 +1,64 @@
+# 数据集文件
+dataset/
+datasets/
+*.h5
+*.hdf5
+
+# CIFAR-10 数据集
+cifar-10-batches-py/
+cifar-10-python.tar.gz
+
+# COCO 数据集
+*.json
+*.txt
+!README.txt
+!requirements.txt
+
+# 日志文件
+logs/
+*.log
+
+# 检查点文件
+checkpoints*/
+*.ckpt
+*.pth
+*.pt
+
+# Python 相关
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# 虚拟环境
+.venv/
+venv/
+ENV/
+env/
+
+# IDE 相关
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 操作系统相关
+.DS_Store
+Thumbs.db
