@@ -9,6 +9,7 @@ from typing import Callable, Optional, List, Dict
 from app.parsers.base import ParsedDocument, ContentBlock, BlockType
 from app.services.base import BaseAIService
 from app.translator.pdf_generator import PDFGenerator
+from app.translator.latex_generator import LatexGenerator
 
 
 class TranslationManager:
@@ -20,6 +21,7 @@ class TranslationManager:
     def __init__(self, ai_service: BaseAIService):
         self.ai_service = ai_service
         self.pdf_generator = PDFGenerator()
+        self.latex_generator = LatexGenerator()
     
     async def translate_to_pdf(
         self,
@@ -146,11 +148,17 @@ class TranslationManager:
             converted_pages.append(page_translations)
             
         if progress_callback:
-            progress_callback(95, "正在生成最终 PDF...")
+            progress_callback(95, "正在生成最终 PDF (LaTeX)...")
             
-        # 生成 PDF
-        return self.pdf_generator.generate_layout_preserved(
-            source_pdf_path=document.source_path,
+        # 生成 PDF (使用 LaTeX 重构)
+        # return self.pdf_generator.generate_layout_preserved(
+        #     source_pdf_path=document.source_path,
+        #     translated_pages=converted_pages,
+        #     output_path=output_path
+        # )
+        
+        return self.latex_generator.generate(
+            document=document,
             translated_pages=converted_pages,
             output_path=output_path
         )
