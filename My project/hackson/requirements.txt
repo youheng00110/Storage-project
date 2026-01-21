@@ -18,3 +18,5 @@ markdown==3.7
 pydantic==2.9.0
 aiofiles==24.1.0
 python-dotenv==1.0.1
+
+pymupdf==1.25.1

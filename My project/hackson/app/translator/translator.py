@@ -42,45 +42,119 @@ class TranslationManager:
         source_path = getattr(document, 'source_path', None)
         if not source_path:
             raise ValueError("文档缺少源文件路径")
+            
+        # 检查是否有详细的页面内容（用于精确布局还原）
+        if hasattr(document, 'pages_content') and document.pages_content:
+            return await self._translate_pdf_with_layout(document, output_path, progress_callback)
         
-        # 获取需要翻译的文本块
-        translatable_blocks = document.get_translatable_blocks()
-        total_blocks = len(translatable_blocks)
+        # 降级方案：如果没有页面信息（比如不是PDF源或者是简单的解析器），无法做布局还原
+        # 这里为了演示，抛出异常或仅做简单文本拼接（暂不支持）
+        raise NotImplementedError("该文档类型不支持布局还原翻译")
+
+    async def _translate_pdf_with_layout(
+        self,
+        document: ParsedDocument,
+        output_path: Path,
+        progress_callback: Optional[Callable[[int, str], None]] = None
+    ) -> Path:
+        """使用页面布局信息进行精确翻译"""
+        converted_pages = [] # List[Dict[block_idx, text]]
         
-        if progress_callback:
-            progress_callback(5, f"共 {total_blocks} 个文本块，开始翻译...")
+        total_pages = len(document.pages_content)
         
-        # 翻译所有块
-        translated_texts: Dict[int, str] = {}
-        
-        for i, block in enumerate(translatable_blocks):
+        for page_idx, page_content in enumerate(document.pages_content):
             if progress_callback:
-                progress = 5 + int((i / total_blocks) * 80)
-                progress_callback(progress, f"正在翻译第 {i + 1}/{total_blocks} 块...")
+                progress = int((page_idx / total_pages) * 90)
+                progress_callback(progress, f"正在翻译第 {page_idx + 1}/{total_pages} 页...")
+            
+            page_translations = {}
+            
+            # 收集该页所有的文本块
+            blocks_to_translate = []
+            block_indices = []
+            
+            for b_idx, block in enumerate(page_content.text_blocks):
+                text = block.get("text", "").strip()
+                if not text:
+                    continue
+                # 简单过滤掉纯数字或太短的非句文本（可选）
+                if len(text) < 2 and text.isdigit():
+                    continue
+                
+                # 过滤掉数学公式块 (不翻译，pdf生成时会自动跳过)
+                is_formula = False
+                # 常见的整段公式模式
+                formula_patterns = [
+                    r'^\s*\$\$[\s\S]*?\$\$\s*$',
+                    r'^\s*\\begin\{equation\}[\s\S]*?\\end\{equation\}\s*$',
+                    r'^\s*\\begin\{align\}[\s\S]*?\\end\{align\}\s*$',
+                    r'^\s*\\\[[\s\S]*?\\\]\s*$'
+                ]
+                import re # Ensure re is available inside function if not global, but usually global
+                
+                for pattern in formula_patterns:
+                    if re.match(pattern, text, re.IGNORECASE):
+                        is_formula = True
+                        break
+                
+                if is_formula:
+                    continue
+
+                blocks_to_translate.append(text)
+                block_indices.append(b_idx)
+            
+            if not blocks_to_translate:
+                converted_pages.append({})
+                continue
+                
+            # 批量翻译（为了提高速度，可以将一页的文本合并发送）
+            # 这里简单实现：逐块或合并翻译
+            # 为了保持块的独立性以便回填，我们将它们组合成一个列表提示给 AI，或者分别翻译
+            # 考虑到上下文，最好是整页文本一起给 AI，请求返回对应的翻译列表
+            # 但为了鲁棒性，这里先逐块翻译（或者小批量）
+            
+            # 简易策略：逐块调用 (注意：这会很慢，但在 Hackathon 项目中可接受)
+            # 优化策略：合并为一个大文本，用特殊分隔符，然后分割
+            
+            combined_text = "\n---BLOCK_SEP---\n".join(blocks_to_translate)
             
             try:
-                # 保护公式：在翻译前标记，翻译后恢复
-                text_to_translate = self._prepare_block_for_translation(block)
-                translated_text = await self.ai_service.translate(text_to_translate)
-                translated_texts[i] = translated_text
+                # 提示 AI 保持分隔符
+                system_prompt = "You are a translator. Translate the following text segments into Chinese. Maintain the number of segments. Segments are separated by '---BLOCK_SEP---'. Return ONLY the translated segments separated by '---BLOCK_SEP---'."
+                # 注意：BaseAIService 可能没有 system_prompt 参数，视具体实现而定
+                # 这里假设 direct translate
+                
+                # 由于我们无法修改 ai_service 接口，这里只能调用 translate
+                # 我们假设 translate 只是简单的 text -> translated text
+                # 尝试分块翻译
+                
+                # 并发翻译该页所有块
+                tasks = [self.ai_service.translate(text) for text in blocks_to_translate]
+                results = await asyncio.gather(*tasks, return_exceptions=True)
+                
+                for i, res in enumerate(results):
+                    original_idx = block_indices[i]
+                    if isinstance(res, Exception):
+                        # 翻译失败，使用原文
+                        page_translations[original_idx] = blocks_to_translate[i]
+                    else:
+                        page_translations[original_idx] = res.strip()
+                        
             except Exception as e:
-                # 翻译失败，保留原文
-                translated_texts[i] = f"[翻译失败]\n{block.content}"
-        
+                print(f"Page {page_idx} translation error: {e}")
+            
+            converted_pages.append(page_translations)
+            
         if progress_callback:
-            progress_callback(90, "正在生成 PDF...")
-        
+            progress_callback(95, "正在生成最终 PDF...")
+            
         # 生成 PDF
-        result_path = self.pdf_generator.generate_from_original(
-            source_pdf_path=source_path,
-            translated_texts=translated_texts,
+        return self.pdf_generator.generate_layout_preserved(
+            source_pdf_path=document.source_path,
+            translated_pages=converted_pages,
             output_path=output_path
         )
-        
-        if progress_callback:
-            progress_callback(100, "PDF 生成完成！")
-        
-        return result_path
+
     
     async def translate_document(
         self,
