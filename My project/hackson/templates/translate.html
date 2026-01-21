@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>翻译进度 - 学术论文翻译工具</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>学术论文翻译工具</h1>
+            <p class="subtitle">翻译进行中...</p>
+        </header>
+
+        <main>
+            <div class="progress-card">
+                <div class="status-icon" id="statusIcon">
+                    <svg class="spinner-large" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="10" fill="none" stroke-width="3"/>
+                    </svg>
+                </div>
+
+                <div class="progress-info">
+                    <h2 id="statusText">正在处理...</h2>
+                    <p id="statusMessage">请稍候，正在翻译您的文档</p>
+                </div>
+
+                <div class="progress-bar-container">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+                    </div>
+                    <span class="progress-text" id="progressText">0%</span>
+                </div>
+
+                <div class="action-buttons" id="actionButtons" style="display: none;">
+                    <a href="/" class="btn btn-secondary">返回首页</a>
+                    <a href="#" class="btn btn-primary" id="downloadBtn">下载翻译结果</a>
+                </div>
+            </div>
+
+            <!-- 预览区域 -->
+            <div class="preview-section" id="previewSection" style="display: none;">
+                <h3>翻译结果预览</h3>
+                <div class="preview-content" id="previewContent"></div>
+            </div>
+        </main>
+
+        <footer>
+            <p>翻译完成后，您可以下载 Markdown 格式的翻译结果</p>
+        </footer>
+    </div>
+
+    <script>
+        const taskId = "{{ task_id }}";
+    </script>
+    <script src="/static/js/translate.js"></script>
+</body>
+</html>
