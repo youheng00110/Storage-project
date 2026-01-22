@@ -1,6 +1,7 @@
 # 数据集文件
 dataset/
 datasets/
+my_dataset/
 *.h5
 *.hdf5
 
