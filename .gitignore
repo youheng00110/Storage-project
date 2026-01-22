@@ -62,3 +62,8 @@ env/
 # 操作系统相关
 .DS_Store
 Thumbs.db
+
+# Pascal VOC 数据集
+**/VOCdevkit/
+**/VOC2012*/
+**/VOC2007*/
