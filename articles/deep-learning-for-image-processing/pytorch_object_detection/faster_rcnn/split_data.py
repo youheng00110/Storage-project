@@ -5,7 +5,7 @@ import random
 def main():
     random.seed(0)  # 设置随机种子，保证随机结果可复现
 
-    files_path = "./VOCdevkit/VOC2012/Annotations"
+    files_path = "D:\\Storage project\\articles\\deep-learning-for-image-processing\\data_set\\VOCdevkit\\VOC2012\\Annotations"
     assert os.path.exists(files_path), "path: '{}' does not exist.".format(files_path)
 
     val_rate = 0.5

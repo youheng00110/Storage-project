@@ -1,3 +1,7 @@
+# Invalid windows files
+nul
+**/nul
+
 # 数据集文件
 dataset/
 datasets/

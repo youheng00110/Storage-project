@@ -1,6 +1,7 @@
 import math
 import sys
 import time
+from tqdm import tqdm
 
 import torch
 
@@ -24,7 +25,10 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch,
         lr_scheduler = utils.warmup_lr_scheduler(optimizer, warmup_iters, warmup_factor)
 
     mloss = torch.zeros(1).to(device)  # mean losses
-    for i, [images, targets] in enumerate(metric_logger.log_every(data_loader, print_freq, header)):
+    
+    # 使用tqdm显示进度条
+    pbar = tqdm(data_loader, file=sys.stdout, desc=header)
+    for i, [images, targets] in enumerate(pbar):
         images = list(image.to(device) for image in images)
         targets = [{k: v.to(device) for k, v in t.items()} for t in targets]
 
@@ -61,6 +65,12 @@ def train_one_epoch(model, optimizer, data_loader, device, epoch,
         metric_logger.update(loss=losses_reduced, **loss_dict_reduced)
         now_lr = optimizer.param_groups[0]["lr"]
         metric_logger.update(lr=now_lr)
+
+        # 更新tqdm进度条的后缀信息
+        pbar.set_postfix({
+            'loss': f'{mloss.item():.4f}',
+            'lr': f'{now_lr:.6f}'
+        })
 
     return mloss, now_lr
 
