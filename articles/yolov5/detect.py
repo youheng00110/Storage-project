@@ -33,9 +33,24 @@ import csv
 import os
 import platform
 import sys
+import types
+import pathlib
 from pathlib import Path
 
 import torch
+
+if "pathlib._local" not in sys.modules:
+    pathlib_local = types.ModuleType("pathlib._local")
+    for attr in (
+        "Path",
+        "PurePath",
+        "PurePosixPath",
+        "PureWindowsPath",
+        "PosixPath",
+        "WindowsPath",
+    ):
+        setattr(pathlib_local, attr, getattr(pathlib, attr))
+    sys.modules["pathlib._local"] = pathlib_local
 
 FILE = Path(__file__).resolve()
 ROOT = FILE.parents[0]  # YOLOv5 root directory
